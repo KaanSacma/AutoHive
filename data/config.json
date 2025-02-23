@@ -1,10 +1,21 @@
 {
   "name" : "AutoHive",
-  "description" : "This is an app automation with a specific/multi-instances app.",
+  "description" : "This is an automation app to a specific/multi-instances app.",
   "version" : "v0.0.1",
-  "defaultSize" : { "width" : 800, "height" : 600 },
+  "defaultSize" : {"width" : 800, "height" : 600},
   "backgroundColor": {"R": 30, "G": 30, "B":  30},
   "foregroundColor": {"R": 255, "G": 255, "B":  255},
-  "keys" : {"save":  "S", "open":  "O", "run" :  "R", "stopRun": "f8", "pauseRun": "f6"},
-  "font" : {"name": "TangoSans", "fileType": "ttf", "path" : "assets/fonts/", "size": 12}
+  "keys" : {
+    "save": {"key": "S", "ctrl": true},
+    "open":  {"key": "O", "ctrl": true},
+    "run" :  {"key": "R", "ctrl": true},
+    "stop": {"key": "f8", "ctrl": false},
+    "pause": {"key": "f6", "ctrl": false}
+  },
+  "font" : {
+    "name": "TangoSans",
+    "fileType": "ttf",
+    "path" : "assets/fonts/",
+    "size": 12
+  }
 }

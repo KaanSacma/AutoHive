@@ -1,0 +1,15 @@
+target "APP NAME" ?/multi
+mouse click btn at x y
+mouse move to x y
+keyboard press key
+keyboard release key
+wait time (ms)
+type "text"
+mouse press key
+mouse release key
+repeat nb times
+    ...
+end
+loop
+    ...
+end

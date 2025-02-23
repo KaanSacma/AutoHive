@@ -1,6 +1,14 @@
 import os
 import wx
+import keyboard
+import threading
 from modules.Handler import *
+
+def check_key(keys, pressed_key, ctrl_pressed):
+    for action, key_info in keys.items():
+        if key_info["key"].lower() == pressed_key.lower() and key_info["ctrl"] == ctrl_pressed:
+            return action
+    return None
 
 class MainWindow(wx.Frame):
     def __init__(self, parent, title, size, config):
@@ -11,6 +19,8 @@ class MainWindow(wx.Frame):
         self.config = config
         self.keys = self.config['keys']
         self.handler = Handler()
+        keyboard.add_hotkey(self.keys["stop"]["key"], self.OnStopScript, args=(None,))
+        keyboard.add_hotkey(self.keys["pause"]["key"], self.OnPauseScript, args=(None,))
 
         self.control = wx.TextCtrl(self, style=wx.TE_MULTILINE)
         font_info = self.config['font']
@@ -35,18 +45,21 @@ class MainWindow(wx.Frame):
 
     def OnKey(self, event):
         key = event.KeyCode
-        if event.ControlDown():
-            self.OnCtrlKey(key)
-        event.Skip()
-
-    def OnCtrlKey(self, key):
         char = chr(key)
-        if char == self.keys["save"]:
-            self.OnSave(None)
-        elif char == self.keys["open"]:
-            self.OnOpen(None)
-        elif char == self.keys["run"]:
-            self.OnRun(None)
+        action = check_key(self.keys, char, event.ControlDown())
+
+        if action:
+            if action == "save":
+                self.OnSave(None)
+            elif action == "open":
+                self.OnOpen(None)
+            elif action == "run":
+                self.OnRun(None)
+            elif action == "stop":
+                self.OnStopScript(None)
+            elif action == "pause":
+                self.OnPauseScript(None)
+        event.Skip()
 
     def OnOpen(self, e):
         self.dirname = ''
@@ -91,7 +104,28 @@ class MainWindow(wx.Frame):
             pass
 
     def OnRun(self, e):
-        self.handler.Parse(self.control.GetValue())
+        if self.handler.running:
+            wx.MessageDialog(None, "Already running!", "Error", wx.OK).ShowModal()
+            return
+        actions = self.handler.ParseScript(self.control.GetValue())
+        print(actions)
+        self.handler.running = True
+        self.handler.pause = False
+        thread = threading.Thread(target=self.handler.RunScript, daemon=True, args=(actions,))
+        thread.start()
+        #self.handler.RunScript(actions)
+
+    def OnStopScript(self, e):
+        if not self.handler.running:
+            wx.MessageDialog(None, "No script running!", "Error", wx.OK).ShowModal()
+            return
+        self.handler.StopScript()
+
+    def OnPauseScript(self, e):
+        if not self.handler.running:
+            wx.MessageDialog(None, "No script running!", "Error", wx.OK).ShowModal()
+            return
+        self.handler.PauseScript()
 
     def OnAbout(self, e):
         dlg = wx.MessageDialog(self, self.config["description"], "About " + self.config["name"], wx.OK)
@@ -102,22 +136,40 @@ class MainWindow(wx.Frame):
         self.Close(True)
 
     def SetTopBar(self):
+        openKeyName = self.keys["open"]["key"]
+        saveKeyName = self.keys["save"]["key"]
+        runKeyName = self.keys["run"]["key"]
+        pauseKeyName = self.keys["pause"]["key"]
+        stopKeyName = self.keys["stop"]["key"]
+        if self.keys["open"]["ctrl"]:
+            openKeyName = "CTRL+" + self.keys["open"]["key"]
+        if self.keys["save"]["ctrl"]:
+            saveKeyName = "CTRL+" + self.keys["save"]["key"]
+        if self.keys["run"]["ctrl"]:
+            runKeyName = "CTRL+" + self.keys["run"]["key"]
+        if self.keys["pause"]["ctrl"]:
+            pauseKeyName = "CTRL+" + self.keys["pause"]["key"]
+        if self.keys["stop"]["ctrl"]:
+            stopKeyName = "CTRL+" + self.keys["stop"]["key"]
+
         file_menu = wx.Menu()
-        menu_openfile = file_menu.Append(wx.ID_OPEN, 'Open', " Open a file (CTRL+" + self.keys["open"] + ")")
-        menu_savefile = file_menu.Append(wx.ID_SAVE, 'Save', " Save a file (CTRL+" + self.keys["save"] + ")")
+        menu_openfile = file_menu.Append(wx.ID_OPEN, 'Open', " Open a file ("+ openKeyName +")")
+        menu_savefile = file_menu.Append(wx.ID_SAVE, 'Save', " Save a file (" + saveKeyName + ")")
         menu_savefileas = file_menu.Append(wx.ID_SAVEAS, 'Save as', " Save as")
         menu_exit = file_menu.Append(wx.ID_EXIT, "Exit", " Exit the app (ALT+F4)")
 
         help_menu = wx.Menu()
         menu_about = help_menu.Append(wx.ID_ABOUT, "About", " About this app")
 
-        action_menu = wx.Menu()
-        menu_run = action_menu.Append(wx.ID_ANY, "Run", " Run the script (CTRL+" + self.keys["run"] + ")")
+        script_menu = wx.Menu()
+        menu_run = script_menu.Append(wx.ID_ANY, "Run", " Run the script (" + runKeyName + ")")
+        menu_pause = script_menu.Append(wx.ID_ANY, "Pause", " Pause the script (" + pauseKeyName + ")")
+        menu_stop = script_menu.Append(wx.ID_ANY, "Stop", " Stop the script (" + stopKeyName + ")")
 
         menu_bar = wx.MenuBar()
         menu_bar.Append(file_menu, "File")
+        menu_bar.Append(script_menu, "Script")
         menu_bar.Append(help_menu, "Help")
-        menu_bar.Append(action_menu, "Action")
         self.SetMenuBar(menu_bar)
 
         self.Bind(wx.EVT_MENU, self.OnOpen, menu_openfile)
@@ -126,3 +178,5 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExit, menu_exit)
         self.Bind(wx.EVT_MENU, self.OnAbout, menu_about)
         self.Bind(wx.EVT_MENU, self.OnRun, menu_run)
+        self.Bind(wx.EVT_MENU, self.OnPauseScript, menu_pause)
+        self.Bind(wx.EVT_MENU, self.OnStopScript, menu_stop)
