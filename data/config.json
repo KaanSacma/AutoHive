@@ -1,0 +1,10 @@
+{
+  "name" : "AutoHive",
+  "description" : "This is an app automation with a specific/multi-instances app.",
+  "version" : "v0.0.1",
+  "defaultSize" : { "width" : 800, "height" : 600 },
+  "backgroundColor": {"R": 30, "G": 30, "B":  30},
+  "foregroundColor": {"R": 255, "G": 255, "B":  255},
+  "keys" : {"save":  "S", "open":  "O", "run" :  "R", "stopRun": "f8", "pauseRun": "f6"},
+  "font" : {"name": "TangoSans", "fileType": "ttf", "path" : "assets/fonts/", "size": 12}
+}
